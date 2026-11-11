@@ -1,4 +1,5 @@
-const API_URL = 'http://localhost:3000/api';
+// Usar caminho relativo para funcionar tanto em localhost quanto no Ngrok sem quebrar no celular
+const API_URL = '/api';
 
 // Elementos HTML
 const authSection = document.getElementById('auth-section');
@@ -14,7 +15,7 @@ const leaderboardList = document.getElementById('leaderboard-list');
 const btnLoadPlayers = document.getElementById('btn-load-players');
 const playersList = document.getElementById('players-list');
 
-// Modal Elements
+// Modal
 const editModal = document.getElementById('edit-modal');
 const editPlayerId = document.getElementById('edit-player-id');
 const editUsername = document.getElementById('edit-username');
@@ -22,7 +23,7 @@ const editPassword = document.getElementById('edit-password');
 const btnSaveEdit = document.getElementById('btn-save-edit');
 const btnCancelEdit = document.getElementById('btn-cancel-edit');
 
-// Canvas do Jogo
+// Canvas
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
@@ -32,13 +33,12 @@ walleImage.src = 'imagens/walle.png';
 let currentUser = null;
 let score = 0;
 let timeSeconds = 0;
-const MAX_TIME = 60; // Tempo limite do jogo
+const MAX_TIME = 60;
 let gameInterval = null;
 let timerInterval = null;
 let isGameOver = false;
 let facingRight = true;
 
-// Configuração do Robô Wall-E
 const robot = {
     x: 280,
     y: 180,
@@ -47,10 +47,8 @@ const robot = {
     speed: 5
 };
 
-// Array para gerenciar múltiplos vírus (máximo 4)
 let viruses = [];
 
-// Lista expandida de Lixos de TI com diferentes pontuações
 const trashTypes = [
     { name: 'Placa-Mãe', icon: '📟', points: 1 },
     { name: 'Monitor Antigo', icon: '🖥️', points: 1 },
@@ -65,8 +63,35 @@ const trashTypes = [
 let items = [];
 const keys = {};
 
+// Teclas do Teclado
 window.addEventListener('keydown', (e) => keys[e.code] = true);
 window.addEventListener('keyup', (e) => keys[e.code] = false);
+
+// CONTROLES TOUCH PARA CELULAR (D-PAD)
+function setupTouchButton(buttonId, keyCode) {
+    const btn = document.getElementById(buttonId);
+    if (!btn) return;
+
+    const startAction = (e) => {
+        e.preventDefault();
+        keys[keyCode] = true;
+    };
+
+    const stopAction = (e) => {
+        e.preventDefault();
+        keys[keyCode] = false;
+    };
+
+    btn.addEventListener('touchstart', startAction);
+    btn.addEventListener('touchend', stopAction);
+    btn.addEventListener('mousedown', startAction);
+    btn.addEventListener('mouseup', stopAction);
+}
+
+setupTouchButton('btn-up', 'KeyW');
+setupTouchButton('btn-down', 'KeyS');
+setupTouchButton('btn-left', 'KeyA');
+setupTouchButton('btn-right', 'KeyD');
 
 // ---------------- AUTENTICAÇÃO & RANKING ----------------
 
@@ -107,7 +132,7 @@ async function loadLeaderboard() {
             const li = document.createElement('li');
             const hScore = player.high_score ?? 0;
             const bTime = player.best_time ?? 0;
-            li.textContent = `${player.username} - ${hScore} pontos (${bTime}s sobrevivência)`;
+            li.textContent = `${player.username} - ${hScore} pts (${bTime}s)`;
             leaderboardList.appendChild(li);
         });
     } catch (err) {
@@ -133,8 +158,8 @@ async function loadPlayers() {
                 <td>${hScore}</td>
                 <td>${bTime}</td>
                 <td>
-                    <button class="btn-edit" onclick="openEditModal(${p.id}, '${p.username}')">Editar Acesso</button>
-                    <button class="btn-delete" onclick="deletePlayer(${p.id})">Excluir</button>
+                    <button class="btn-edit" onclick="openEditModal(${p.id}, '${p.username}')">Editar</button>
+                    <button class="btn-delete" onclick="deletePlayer(${p.id})">X</button>
                 </td>
             `;
             playersList.appendChild(tr);
@@ -225,7 +250,6 @@ function spawnTrash() {
     }
 }
 
-// Cria e adiciona um novo vírus no jogo
 function addVirus() {
     if (viruses.length >= 4) return;
 
@@ -242,28 +266,22 @@ function addVirus() {
 
 function updateViruses() {
     viruses.forEach((v) => {
-        // Movimento do vírus com rebate nas bordas
         v.x += v.speedX;
         v.y += v.speedY;
 
         if (v.x <= 0 || v.x >= canvas.width - v.size) v.speedX *= -1;
         if (v.y <= 0 || v.y >= canvas.height - v.size) v.speedY *= -1;
 
-        // Colisão com o robô Wall-E
         if (
             robot.x < v.x + v.size &&
             robot.x + robot.width > v.x &&
             robot.y < v.y + v.size &&
             robot.y + robot.height > v.y
         ) {
-            // Perde 5 segundos de tempo
             timeSeconds += 5;
-            
-            // Reposiciona esse vírus específico longe do robô
             v.x = Math.random() * (canvas.width - 40) + 10;
             v.y = Math.random() * (canvas.height - 40) + 10;
 
-            // Efeito visual no indicador de tempo
             timerDisplay.style.color = '#e74c3c';
             setTimeout(() => timerDisplay.style.color = '#fff', 400);
 
@@ -279,7 +297,6 @@ function updateViruses() {
 function updateGame() {
     if (isGameOver) return;
 
-    // Movimentação do robô
     if ((keys['ArrowUp'] || keys['KeyW']) && robot.y > 0) robot.y -= robot.speed;
     if ((keys['ArrowDown'] || keys['KeyS']) && robot.y < canvas.height - robot.height) robot.y += robot.speed;
     if ((keys['ArrowLeft'] || keys['KeyA']) && robot.x > 0) {
@@ -293,7 +310,6 @@ function updateGame() {
 
     updateViruses();
 
-    // Colisão do Wall-E com os lixos
     items.forEach((item, index) => {
         if (
             robot.x < item.x + item.size &&
@@ -302,7 +318,7 @@ function updateGame() {
             robot.y + robot.height > item.y
         ) {
             items.splice(index, 1);
-            score += item.points; // Adiciona os pontos específicos do item
+            score += item.points;
             scoreDisplay.textContent = score;
             spawnTrash();
         }
@@ -314,7 +330,6 @@ function updateGame() {
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Desenha o Wall-E
     if (walleImage.complete && walleImage.naturalWidth !== 0) {
         ctx.save();
         if (!facingRight) {
@@ -330,13 +345,11 @@ function draw() {
         ctx.fillRect(robot.x, robot.y, robot.width, robot.height);
     }
 
-    // Desenha todos os vírus
     ctx.font = '24px Arial';
     viruses.forEach(v => {
         ctx.fillText(v.icon, v.x, v.y + 20);
     });
 
-    // Desenha os lixos de TI
     items.forEach(item => {
         ctx.font = '22px Arial';
         ctx.fillText(item.icon, item.x, item.y + 20);
@@ -352,14 +365,12 @@ function startGame() {
     items = [];
     viruses = [];
 
-    // Começa com 1 vírus no início
     addVirus();
 
     scoreDisplay.textContent = score;
     timerDisplay.textContent = MAX_TIME - timeSeconds;
     btnRestart.style.display = 'none';
 
-    // Gerar lixos iniciais
     for (let i = 0; i < 4; i++) spawnTrash();
 
     clearInterval(gameInterval);
@@ -372,7 +383,6 @@ function startGame() {
         const remainingTime = Math.max(0, MAX_TIME - timeSeconds);
         timerDisplay.textContent = remainingTime;
 
-        // A cada 20 segundos de tempo decorrido, adiciona outro vírus até o limite de 4
         if (timeSeconds % 20 === 0 && viruses.length < 4) {
             addVirus();
         }

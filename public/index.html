@@ -2,7 +2,8 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Evita que o celular faça zoom ao tocar no jogo -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>EcoBot: Coleta de E-Lixo</title>
     <link rel="stylesheet" href="style.css">
 </head>
@@ -10,7 +11,7 @@
     <div class="container">
         <h1>🤖 EcoBot: Coletor de E-Lixo</h1>
 
-        <!-- Autenticação (Com mascara CSS para evitar popup do Chrome) -->
+        <!-- Autenticação -->
         <div id="auth-section" class="auth-box">
             <h3>Entrar ou Cadastrar</h3>
             <input type="text" id="username" placeholder="Nome de usuário" autocomplete="off">
@@ -26,7 +27,19 @@
                 <span>Lixo Coletado: <span id="score">0</span></span>
                 <span>Tempo: <span id="timer">60</span>s</span>
             </div>
+            
             <canvas id="gameCanvas" width="600" height="400"></canvas>
+            
+            <!-- Controles Touch para Celular -->
+            <div id="mobile-controls" class="dpad-container">
+                <button id="btn-up" class="dpad-btn up">▲</button>
+                <div class="dpad-middle">
+                    <button id="btn-left" class="dpad-btn left">◄</button>
+                    <button id="btn-down" class="dpad-btn down">▼</button>
+                    <button id="btn-right" class="dpad-btn right">►</button>
+                </div>
+            </div>
+
             <br>
             <button id="btn-restart" style="display: none;">Jogar Novamente</button>
         </div>
