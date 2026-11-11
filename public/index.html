@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EcoBot: Coleta de E-Lixo</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 EcoBot: Coletor de E-Lixo</h1>
+
+        <!-- Autenticação (Com mascara CSS para evitar popup do Chrome) -->
+        <div id="auth-section" class="auth-box">
+            <h3>Entrar ou Cadastrar</h3>
+            <input type="text" id="username" placeholder="Nome de usuário" autocomplete="off">
+            <input type="text" id="password" class="password-mask" placeholder="Senha" autocomplete="off">
+            <br><br>
+            <button id="btn-login">Entrar / Cadastrar</button>
+        </div>
+
+        <!-- Área do Jogo -->
+        <div id="game-section" style="display: none;">
+            <div class="hud">
+                <span>Jogador: <span id="user-display">-</span></span>
+                <span>Lixo Coletado: <span id="score">0</span></span>
+                <span>Tempo: <span id="timer">60</span>s</span>
+            </div>
+            <canvas id="gameCanvas" width="600" height="400"></canvas>
+            <br>
+            <button id="btn-restart" style="display: none;">Jogar Novamente</button>
+        </div>
+
+        <!-- Hall dos Melhores -->
+        <div class="leaderboard-box">
+            <h2>🏆 Hall dos Melhores</h2>
+            <ol id="leaderboard-list"></ol>
+        </div>
+
+        <!-- Gerenciador de Jogadores (CRUD) -->
+        <div class="admin-box">
+            <h2>⚙️ Gerenciar Jogadores</h2>
+            <button id="btn-load-players">Atualizar Lista de Jogadores</button>
+            <table id="players-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nome</th>
+                        <th>Recorde</th>
+                        <th>Tempo (s)</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="players-list"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Modal para Edição de Usuário e Senha -->
+    <div id="edit-modal" class="modal">
+        <div class="modal-content">
+            <h3>Editar Dados de Acesso</h3>
+            <input type="hidden" id="edit-player-id">
+            
+            <label for="edit-username">Novo Nome de Usuário:</label>
+            <input type="text" id="edit-username" placeholder="Usuário" autocomplete="off">
+
+            <label for="edit-password">Nova Senha:</label>
+            <input type="text" id="edit-password" class="password-mask" placeholder="Nova Senha" autocomplete="off">
+
+            <div class="modal-buttons">
+                <button id="btn-save-edit" class="btn-edit">Salvar Alterações</button>
+                <button id="btn-cancel-edit" class="btn-cancel">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
