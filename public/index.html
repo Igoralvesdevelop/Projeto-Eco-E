@@ -2,92 +2,163 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <!-- Evita que o celular faça zoom ao tocar no jogo -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>EcoBot: Coleta de E-Lixo</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Eco-E: Coleta de E-Lixo</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css?v=3">
 </head>
 <body>
-    <div class="container">
-        <h1>🤖 EcoBot: Coletor de E-Lixo</h1>
+    <main class="main-wrapper">
+        <!-- Cabeçalho Centralizado com a Logo do Wall-E acima do nome -->
+        <header class="game-header">
+            <img src="https://images.seeklogo.com/logo-png/15/2/wall-e-logo-png_seeklogo-151299.png" alt="Logo WALL-E" class="top-brand-logo">
+         
+            <p class="subtitle">Coleta de Lixo Eletrônico</p>
+        </header>
 
-        <!-- Autenticação -->
-        <div id="auth-section" class="auth-box">
-            <h3>Entrar ou Cadastrar</h3>
-            <input type="text" id="username" placeholder="Nome de usuário" autocomplete="off">
-            <input type="text" id="password" class="password-mask" placeholder="Senha" autocomplete="off">
-            <br><br>
-            <button id="btn-login">Entrar / Cadastrar</button>
-        </div>
+        <!-- TELA DE LOGIN CENTRALIZADA -->
+        <section id="auth-section" class="card auth-card">
+            <img src="imagens/walle.png" alt="Wall-E" class="hero-avatar" onerror="this.style.display='none'">
+            <h2>Entrar para Jogar</h2>
+            <p class="auth-hint">Digite um apelido e senha para começar.</p>
 
-        <!-- Área do Jogo -->
-        <div id="game-section" style="display: none;">
-            <div class="hud">
-                <span>Jogador: <span id="user-display">-</span></span>
-                <span>Lixo Coletado: <span id="score">0</span></span>
-                <span>Tempo: <span id="timer">60</span>s</span>
+            <form id="auth-form" class="auth-form" autocomplete="off">
+                <input type="text" id="username" placeholder="Seu apelido" maxlength="12" required autocomplete="off">
+                
+                <div class="pass-wrapper">
+                    <input type="text" id="password" class="password-mask" placeholder="Sua senha" required autocomplete="off">
+                    <button type="button" id="btn-toggle-pass" class="toggle-pass" title="Mostrar/Ocultar senha">👁️</button>
+                </div>
+
+                <p id="auth-feedback" class="auth-feedback"></p>
+
+                <button type="submit" id="btn-login" class="btn-primary">
+                    INICIAR JOGO
+                </button>
+            </form>
+
+            <div class="rules-box">
+                <span>🕹️ Setas / WASD / D-Pad</span>
+                <span>♻️ E-Lixo: +1 a +3 pts</span>
+                <span>👾 Vírus: -5 segundos</span>
             </div>
-            
-            <canvas id="gameCanvas" width="600" height="400"></canvas>
-            
-            <!-- Controles Touch para Celular -->
-            <div id="mobile-controls" class="dpad-container">
-                <button id="btn-up" class="dpad-btn up">▲</button>
-                <div class="dpad-middle">
-                    <button id="btn-left" class="dpad-btn left">◄</button>
-                    <button id="btn-down" class="dpad-btn down">▼</button>
-                    <button id="btn-right" class="dpad-btn right">►</button>
+        </section>
+
+        <!-- ÁREA DO JOGO CENTRALIZADA -->
+        <section id="game-section" class="card game-card" style="display: none;">
+            <div class="hud">
+                <span>Jogador: <strong id="user-display">-</strong></span>
+                <span>Pontos: <strong id="score">0</strong></span>
+                <span>Tempo: <strong id="timer">60</strong>s</span>
+                <button id="btn-logout" class="btn-exit">Sair</button>
+            </div>
+
+            <div class="canvas-wrapper">
+                <canvas id="gameCanvas" width="600" height="400"></canvas>
+
+                <!-- Tela de Game Over -->
+                <div id="game-over-screen" class="game-over-overlay" style="display: none;">
+                    <h2>GAME OVER</h2>
+                    <p id="game-over-reason">O tempo acabou!</p>
+                    <div class="final-stats">
+                        <p>Pontuação: <strong id="final-score">0</strong> pts</p>
+                        <p>Tempo: <strong id="final-time">0</strong>s</p>
+                    </div>
+                    <button id="btn-restart" class="btn-primary">Jogar Novamente</button>
                 </div>
             </div>
 
-            <br>
-            <button id="btn-restart" style="display: none;">Jogar Novamente</button>
-        </div>
+            <!-- Controles Touch para Celular -->
+            <div id="mobile-controls" class="dpad-container">
+                <button id="btn-up" class="dpad-btn">▲</button>
+                <div class="dpad-middle">
+                    <button id="btn-left" class="dpad-btn">◄</button>
+                    <button id="btn-down" class="dpad-btn">▼</button>
+                    <button id="btn-right" class="dpad-btn">►</button>
+                </div>
+            </div>
+        </section>
 
-        <!-- Hall dos Melhores -->
-        <div class="leaderboard-box">
-            <h2>🏆 Hall dos Melhores</h2>
-            <ol id="leaderboard-list"></ol>
-        </div>
+        <!-- HALL DOS MELHORES (ESTILO ARCADE LIMPO E CENTRALIZADO) -->
+        <section class="card arcade-hall">
+            <div class="arcade-top-bar">
+                <div class="arcade-stat">
+                    <span class="label-red">1UP</span>
+                    <span id="arcade-1up">0000</span>
+                </div>
+                <div class="arcade-stat">
+                    <span class="label-red">HIGH SCORE</span>
+                    <span id="arcade-highscore">0000</span>
+                </div>
+            </div>
 
-        <!-- Gerenciador de Jogadores (CRUD) -->
-        <div class="admin-box">
-            <h2>⚙️ Gerenciar Jogadores</h2>
-            <button id="btn-load-players">Atualizar Lista de Jogadores</button>
-            <table id="players-table">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Nome</th>
-                        <th>Recorde</th>
-                        <th>Tempo (s)</th>
-                        <th>Ações</th>
-                    </tr>
-                </thead>
-                <tbody id="players-list"></tbody>
-            </table>
+            <div class="hall-title">TOP 5 PLAYERS</div>
+
+            <div class="arcade-table">
+                <div class="arcade-row arcade-header-row">
+                    <span>#</span>
+                    <span>SCORE</span>
+                    <span>NAME</span>
+                    <span>TIME</span>
+                </div>
+                <div id="leaderboard-list" class="arcade-body"></div>
+            </div>
+
+            <div class="hall-footer">
+                <span>CREDIT 1</span>
+                <button id="btn-open-admin" class="admin-link-btn">Admin</button>
+            </div>
+        </section>
+    </main>
+
+    <!-- ABA / MODAL DE GERENCIAMENTO ADMIN -->
+    <div id="admin-overlay" class="modal" style="display: none;">
+        <div class="admin-panel-content">
+            <div class="admin-panel-header">
+                <h2>Gerenciar Jogadores</h2>
+                <button id="btn-close-admin" class="btn-close-x">✖</button>
+            </div>
+
+            <div class="admin-toolbar">
+                <button id="btn-load-players" class="btn-secondary">Atualizar Lista</button>
+            </div>
+
+            <div class="table-scroll">
+                <table id="players-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Nome</th>
+                            <th>Recorde</th>
+                            <th>Tempo</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="players-list"></tbody>
+                </table>
+            </div>
         </div>
     </div>
 
-    <!-- Modal para Edição de Usuário e Senha -->
-    <div id="edit-modal" class="modal">
+    <!-- Modal de Edição -->
+    <div id="edit-modal" class="modal" style="display: none; z-index: 200;">
         <div class="modal-content">
-            <h3>Editar Dados de Acesso</h3>
+            <h3>Editar Jogador</h3>
             <input type="hidden" id="edit-player-id">
             
-            <label for="edit-username">Novo Nome de Usuário:</label>
-            <input type="text" id="edit-username" placeholder="Usuário" autocomplete="off">
+            <label for="edit-username">Novo Nome:</label>
+            <input type="text" id="edit-username" placeholder="Nome" autocomplete="off">
 
             <label for="edit-password">Nova Senha:</label>
-            <input type="text" id="edit-password" class="password-mask" placeholder="Nova Senha" autocomplete="off">
+            <input type="text" id="edit-password" class="password-mask" placeholder="Senha" autocomplete="off">
 
             <div class="modal-buttons">
-                <button id="btn-save-edit" class="btn-edit">Salvar Alterações</button>
+                <button id="btn-save-edit" class="btn-edit">Salvar</button>
                 <button id="btn-cancel-edit" class="btn-cancel">Cancelar</button>
             </div>
         </div>
     </div>
 
-    <script src="app.js"></script>
+    <script src="app.js?v=3"></script>
 </body>
 </html>

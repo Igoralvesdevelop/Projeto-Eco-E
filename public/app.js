@@ -1,21 +1,40 @@
-// Usar caminho relativo para funcionar tanto em localhost quanto no Ngrok sem quebrar no celular
 const API_URL = '/api';
+const ADMIN_PASS = 'admin123';
 
 // Elementos HTML
 const authSection = document.getElementById('auth-section');
+const authForm = document.getElementById('auth-form');
+const authFeedback = document.getElementById('auth-feedback');
 const gameSection = document.getElementById('game-section');
 const usernameInput = document.getElementById('username');
 const passwordInput = document.getElementById('password');
+const btnTogglePass = document.getElementById('btn-toggle-pass');
 const btnLogin = document.getElementById('btn-login');
+const btnLogout = document.getElementById('btn-logout');
 const btnRestart = document.getElementById('btn-restart');
 const userDisplay = document.getElementById('user-display');
 const scoreDisplay = document.getElementById('score');
 const timerDisplay = document.getElementById('timer');
 const leaderboardList = document.getElementById('leaderboard-list');
+
+// Elementos do Placar Arcade
+const arcade1Up = document.getElementById('arcade-1up');
+const arcadeHighScore = document.getElementById('arcade-highscore');
+
+// Elementos da Aba Admin
+const btnOpenAdmin = document.getElementById('btn-open-admin');
+const btnCloseAdmin = document.getElementById('btn-close-admin');
+const adminOverlay = document.getElementById('admin-overlay');
 const btnLoadPlayers = document.getElementById('btn-load-players');
 const playersList = document.getElementById('players-list');
 
-// Modal
+// Elementos da Tela de Game Over
+const gameOverScreen = document.getElementById('game-over-screen');
+const gameOverReason = document.getElementById('game-over-reason');
+const finalScoreDisplay = document.getElementById('final-score');
+const finalTimeDisplay = document.getElementById('final-time');
+
+// Modal de Edição
 const editModal = document.getElementById('edit-modal');
 const editPlayerId = document.getElementById('edit-player-id');
 const editUsername = document.getElementById('edit-username');
@@ -38,6 +57,7 @@ let gameInterval = null;
 let timerInterval = null;
 let isGameOver = false;
 let facingRight = true;
+let isAdminUnlocked = false;
 
 const robot = {
     x: 280,
@@ -67,7 +87,7 @@ const keys = {};
 window.addEventListener('keydown', (e) => keys[e.code] = true);
 window.addEventListener('keyup', (e) => keys[e.code] = false);
 
-// CONTROLES TOUCH PARA CELULAR (D-PAD)
+// Controles Touch (D-Pad)
 function setupTouchButton(buttonId, keyCode) {
     const btn = document.getElementById(buttonId);
     if (!btn) return;
@@ -93,13 +113,45 @@ setupTouchButton('btn-down', 'KeyS');
 setupTouchButton('btn-left', 'KeyA');
 setupTouchButton('btn-right', 'KeyD');
 
-// ---------------- AUTENTICAÇÃO & RANKING ----------------
+// ---------------- ABA ADMIN NO CANTO ----------------
 
-btnLogin.addEventListener('click', async () => {
+btnOpenAdmin.addEventListener('click', () => {
+    if (!isAdminUnlocked) {
+        const pass = prompt('Digite a senha de administrador:');
+        if (pass !== ADMIN_PASS) {
+            if (pass !== null) alert('Senha de administrador incorreta!');
+            return;
+        }
+        isAdminUnlocked = true;
+    }
+    adminOverlay.style.display = 'flex';
+    loadPlayers();
+});
+
+btnCloseAdmin.addEventListener('click', () => {
+    adminOverlay.style.display = 'none';
+});
+
+// ---------------- AUTENTICAÇÃO & RANKING ARCADE ----------------
+
+btnTogglePass.addEventListener('click', () => {
+    passwordInput.classList.toggle('password-mask');
+    btnTogglePass.textContent = passwordInput.classList.contains('password-mask') ? '👁️' : '🙈';
+});
+
+authForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
     const username = usernameInput.value.trim();
     const password = passwordInput.value.trim();
 
-    if (!username || !password) return alert('Preencha os campos!');
+    if (!username || !password) {
+        authFeedback.textContent = '⚠️ Preencha usuário e senha para começar!';
+        return;
+    }
+
+    authFeedback.textContent = '';
+    btnLogin.disabled = true;
+    btnLogin.textContent = '⏳ CONECTANDO...';
 
     try {
         const res = await fetch(`${API_URL}/auth`, {
@@ -112,15 +164,30 @@ btnLogin.addEventListener('click', async () => {
         if (res.ok) {
             currentUser = data.player.username;
             userDisplay.textContent = currentUser;
+            arcade1Up.textContent = String(data.player.high_score ?? 0).padStart(4, '0');
             authSection.style.display = 'none';
             gameSection.style.display = 'block';
             startGame();
         } else {
-            alert(data.error);
+            authFeedback.textContent = `❌ ${data.error}`;
         }
     } catch (err) {
-        alert('Erro ao conectar ao servidor.');
+        authFeedback.textContent = '❌ Erro ao conectar ao servidor.';
+    } finally {
+        btnLogin.disabled = false;
+        btnLogin.textContent = '▶ INICIAR MISSÃO';
     }
+});
+
+btnLogout.addEventListener('click', () => {
+    isGameOver = true;
+    clearInterval(gameInterval);
+    clearInterval(timerInterval);
+    currentUser = null;
+    passwordInput.value = '';
+    authFeedback.textContent = '';
+    gameSection.style.display = 'none';
+    authSection.style.display = 'block';
 });
 
 async function loadLeaderboard() {
@@ -128,19 +195,36 @@ async function loadLeaderboard() {
         const res = await fetch(`${API_URL}/leaderboard`);
         const data = await res.json();
         leaderboardList.innerHTML = '';
-        data.forEach(player => {
-            const li = document.createElement('li');
-            const hScore = player.high_score ?? 0;
-            const bTime = player.best_time ?? 0;
-            li.textContent = `${player.username} - ${hScore} pts (${bTime}s)`;
-            leaderboardList.appendChild(li);
+
+        // Atualiza o HIGH SCORE no topo do painel arcade
+        const topScore = data.length > 0 ? (data[0].high_score ?? 0) : 0;
+        arcadeHighScore.textContent = String(topScore).padStart(4, '0');
+
+        // Exibe os Top 5 jogadores no formato arcade (POS | SCORE | NAME | TIME)
+        const top5 = data.slice(0, 5);
+        top5.forEach((player, index) => {
+            const row = document.createElement('div');
+            row.className = 'arcade-row';
+
+            const pos = index + 1;
+            const formattedScore = String(player.high_score ?? 0).padStart(4, '0');
+            const nameUpper = player.username.toUpperCase().slice(0, 10);
+            const timeVal = `${player.best_time ?? 0}S`;
+
+            row.innerHTML = `
+                <span>${pos}</span>
+                <span>${formattedScore}</span>
+                <span>${nameUpper}</span>
+                <span>${timeVal}</span>
+            `;
+            leaderboardList.appendChild(row);
         });
     } catch (err) {
         console.error('Erro ao carregar ranking:', err);
     }
 }
 
-// ---------------- GERENCIAMENTO CRUD ----------------
+// ---------------- GERENCIAMENTO CRUD (ADMIN) ----------------
 
 async function loadPlayers() {
     try {
@@ -159,7 +243,7 @@ async function loadPlayers() {
                 <td>${bTime}</td>
                 <td>
                     <button class="btn-edit" onclick="openEditModal(${p.id}, '${p.username}')">Editar</button>
-                    <button class="btn-delete" onclick="deletePlayer(${p.id})">X</button>
+                    <button class="btn-delete" onclick="deletePlayer(${p.id})">Excluir</button>
                 </td>
             `;
             playersList.appendChild(tr);
@@ -282,11 +366,13 @@ function updateViruses() {
             v.x = Math.random() * (canvas.width - 40) + 10;
             v.y = Math.random() * (canvas.height - 40) + 10;
 
+            const remainingTime = Math.max(0, MAX_TIME - timeSeconds);
+            timerDisplay.textContent = remainingTime;
             timerDisplay.style.color = '#e74c3c';
             setTimeout(() => timerDisplay.style.color = '#fff', 400);
 
             if (timeSeconds >= MAX_TIME) {
-                endGame();
+                endGame('Você foi infectado pelos vírus e perdeu todo o tempo!');
             }
         }
     });
@@ -320,6 +406,7 @@ function updateGame() {
             items.splice(index, 1);
             score += item.points;
             scoreDisplay.textContent = score;
+            arcade1Up.textContent = String(score).padStart(4, '0');
             spawnTrash();
         }
     });
@@ -365,11 +452,13 @@ function startGame() {
     items = [];
     viruses = [];
 
+    gameOverScreen.style.display = 'none';
+
     addVirus();
 
     scoreDisplay.textContent = score;
+    arcade1Up.textContent = '0000';
     timerDisplay.textContent = MAX_TIME - timeSeconds;
-    btnRestart.style.display = 'none';
 
     for (let i = 0; i < 4; i++) spawnTrash();
 
@@ -388,12 +477,12 @@ function startGame() {
         }
 
         if (timeSeconds >= MAX_TIME) {
-            endGame();
+            endGame('O tempo da coleta esgotou!');
         }
     }, 1000);
 }
 
-async function endGame() {
+async function endGame(reason = 'Fim de partida!') {
     if (isGameOver) return;
     isGameOver = true;
     
@@ -403,8 +492,10 @@ async function endGame() {
     const timeSurvived = Math.min(timeSeconds, MAX_TIME);
     timerDisplay.textContent = 0;
 
-    alert(`Fim de jogo! Você fez ${score} pontos coletando lixo de TI em ${timeSurvived}s.`);
-    btnRestart.style.display = 'inline-block';
+    gameOverReason.textContent = reason;
+    finalScoreDisplay.textContent = score;
+    finalTimeDisplay.textContent = timeSurvived;
+    gameOverScreen.style.display = 'flex';
 
     try {
         await fetch(`${API_URL}/score`, {
@@ -413,7 +504,7 @@ async function endGame() {
             body: JSON.stringify({ username: currentUser, score, time: timeSurvived })
         });
         loadLeaderboard();
-        loadPlayers();
+        if (adminOverlay.style.display === 'flex') loadPlayers();
     } catch (err) {
         console.error('Erro ao salvar pontuação:', err);
     }
@@ -422,4 +513,3 @@ async function endGame() {
 btnRestart.addEventListener('click', startGame);
 
 loadLeaderboard();
-loadPlayers();

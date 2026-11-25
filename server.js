@@ -25,11 +25,11 @@ app.post('/api/auth', async (req, res) => {
             if (player.password === password) {
                 res.json({
                     message: 'Login bem-sucedido',
-                    player: { 
-                        id: player.id, 
-                        username: player.username, 
-                        high_score: player.high_score || 0, 
-                        best_time: player.best_time || 0 
+                    player: {
+                        id: player.id,
+                        username: player.username,
+                        high_score: player.high_score || 0,
+                        best_time: player.best_time || 0
                     }
                 });
             } else {
@@ -37,12 +37,12 @@ app.post('/api/auth', async (req, res) => {
             }
         } else {
             const [result] = await db.query(
-                'INSERT INTO players (username, password, high_score, best_time) VALUES (?, ?, 0, 0)', 
+                'INSERT INTO players (username, password, high_score, best_time) VALUES (?, ?, 0, 0)',
                 [username, password]
             );
-            res.json({ 
-                message: 'Conta criada com sucesso', 
-                player: { id: result.insertId, username, high_score: 0, best_time: 0 } 
+            res.json({
+                message: 'Conta criada com sucesso',
+                player: { id: result.insertId, username, high_score: 0, best_time: 0 }
             });
         }
     } catch (err) {
@@ -50,7 +50,6 @@ app.post('/api/auth', async (req, res) => {
     }
 });
 
-// Registra partida e atualiza o recorde SEM ZERAR o anterior
 app.post('/api/score', async (req, res) => {
     const { username, score, time } = req.body;
 
@@ -62,26 +61,16 @@ app.post('/api/score', async (req, res) => {
         const currentHighScore = player.high_score || 0;
         const currentBestTime = player.best_time || 0;
 
-        // Salva histórico da partida
         await db.query('INSERT INTO matches (player_id, score, time_seconds) VALUES (?, ?, ?)', [player.id, score, time]);
 
-        // Avalia se o resultado atual é melhor que o armazenado
-        const isBetterScore = score > currentHighScore;
-        const isEqualScoreBetterTime = (score === currentHighScore && time > currentBestTime);
+        const isBetter = score > currentHighScore || (score === currentHighScore && time > currentBestTime);
 
-        if (isBetterScore || isEqualScoreBetterTime) {
-            const newScore = Math.max(score, currentHighScore);
-            const newTime = isBetterScore ? time : Math.max(time, currentBestTime);
-
-            await db.query(
-                'UPDATE players SET high_score = ?, best_time = ? WHERE id = ?',
-                [newScore, newTime, player.id]
-            );
-
-            return res.json({ updated: true, newHighScore: newScore, newBestTime: newTime });
+        if (isBetter) {
+            await db.query('UPDATE players SET high_score = ?, best_time = ? WHERE id = ?', [score, time, player.id]);
+            res.json({ updated: true, newHighScore: score, newBestTime: time });
+        } else {
+            res.json({ updated: false });
         }
-
-        res.json({ updated: false, high_score: currentHighScore, best_time: currentBestTime });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -90,9 +79,7 @@ app.post('/api/score', async (req, res) => {
 app.get('/api/leaderboard', async (req, res) => {
     try {
         const [rows] = await db.query(`
-            SELECT username, 
-                   COALESCE(high_score, 0) AS high_score, 
-                   COALESCE(best_time, 0) AS best_time 
+            SELECT username, high_score, best_time 
             FROM players 
             ORDER BY high_score DESC, best_time DESC 
             LIMIT 10
@@ -103,26 +90,19 @@ app.get('/api/leaderboard', async (req, res) => {
     }
 });
 
-// ---------------- OPERAÇÕES CRUD DE JOGADORES ----------------
+// ---------------- CRUD DE JOGADORES (PAINEL ADMIN) ----------------
 
-// Listar todos os jogadores sem permitir valores nulos no retorno
+// Listar todos os jogadores
 app.get('/api/players', async (req, res) => {
     try {
-        const [rows] = await db.query(`
-            SELECT id, username, 
-                   COALESCE(high_score, 0) AS high_score, 
-                   COALESCE(best_time, 0) AS best_time, 
-                   created_at 
-            FROM players 
-            ORDER BY id DESC
-        `);
+        const [rows] = await db.query('SELECT id, username, high_score, best_time, created_at FROM players ORDER BY id DESC');
         res.json(rows);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
-// Atualiza EXCLUSIVAMENTE o nome de usuário e a senha (não altera pontuação nem tempo)
+// Atualizar apenas Nome e Senha (preservando high_score e best_time)
 app.put('/api/players/:id', async (req, res) => {
     const { id } = req.params;
     const { username, password } = req.body;
@@ -150,7 +130,7 @@ app.put('/api/players/:id', async (req, res) => {
     }
 });
 
-// Excluir um jogador por ID
+// Deletar jogador
 app.delete('/api/players/:id', async (req, res) => {
     const { id } = req.params;
 
