@@ -5,22 +5,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Eco-E: Coleta de E-Lixo</title>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=3">
+    <link rel="stylesheet" href="style.css?v=6">
 </head>
 <body>
+    <!-- Fundo animado em modo atração (Wall-E patrulhando enquanto ninguém joga) -->
+    <canvas id="attractCanvas" class="attract-bg-canvas"></canvas>
+
     <main class="main-wrapper">
-        <!-- Cabeçalho Centralizado com a Logo do Wall-E acima do nome -->
+        <!-- Cabeçalho Centralizado -->
         <header class="game-header">
             <img src="https://images.seeklogo.com/logo-png/15/2/wall-e-logo-png_seeklogo-151299.png" alt="Logo WALL-E" class="top-brand-logo">
-         
-            <p class="subtitle">Coleta de Lixo Eletrônico</p>
+            <p class="subtitle">Operação Reciclagem &bull; Edição CaseMod</p>
         </header>
 
         <!-- TELA DE LOGIN CENTRALIZADA -->
-        <section id="auth-section" class="card auth-card">
-            <img src="imagens/walle.png" alt="Wall-E" class="hero-avatar" onerror="this.style.display='none'">
+        <section id="auth-section" class="card auth-card steampunk-card">
+            <img src="imagens/wal.png" alt="Wall-E" class="hero-avatar" onerror="this.style.display='none'">
             <h2>Entrar para Jogar</h2>
-            <p class="auth-hint">Digite um apelido e senha para começar.</p>
+            <p class="auth-hint">Digite um apelido e senha para disputar o ranking da feira.</p>
 
             <form id="auth-form" class="auth-form" autocomplete="off">
                 <input type="text" id="username" placeholder="Seu apelido" maxlength="12" required autocomplete="off">
@@ -32,25 +34,39 @@
 
                 <p id="auth-feedback" class="auth-feedback"></p>
 
-                <button type="submit" id="btn-login" class="btn-primary">
-                    INICIAR JOGO
+                <button type="submit" id="btn-login" class="btn-primary steampunk-btn">
+                    INICIAR MISSÃO
                 </button>
             </form>
 
             <div class="rules-box">
                 <span>🕹️ Setas / WASD / D-Pad</span>
-                <span>♻️ E-Lixo: +1 a +3 pts</span>
-                <span>👾 Vírus: -5 segundos</span>
+                <span>♻️ E-Lixo: +1 a +3 pts (3 seguidos = Combo 2x!)</span>
+                <span>🌱 Bota com Planta: +5 segundos extras</span>
+                <span>🤖 AUTO (Vilão): -5 segundos</span>
+                <span>🧨 Bateria Explosiva: trava o robô por 3s</span>
+            </div>
+
+            <!-- QR Code Automático para Visitantes da Feira -->
+            <div class="qr-box">
+                <img id="qr-code-img" alt="QR Code para jogar no celular" class="qr-img">
+                <div class="qr-info">
+                    <strong>JOGUE NO CELULAR</strong>
+                    <span>Escaneie para entrar no ranking ao vivo!</span>
+                </div>
             </div>
         </section>
 
         <!-- ÁREA DO JOGO CENTRALIZADA -->
-        <section id="game-section" class="card game-card" style="display: none;">
+        <section id="game-section" class="card game-card steampunk-card" style="display: none;">
             <div class="hud">
                 <span>Jogador: <strong id="user-display">-</strong></span>
-                <span>Pontos: <strong id="score">0</strong></span>
+                <span>Pts: <strong id="score">0</strong> <small id="combo-badge" class="combo-badge" style="display:none;">2X!</small></span>
                 <span>Tempo: <strong id="timer">60</strong>s</span>
-                <button id="btn-logout" class="btn-exit">Sair</button>
+                <div class="hud-actions">
+                    <button id="btn-mute" class="btn-sound" title="Ativar/Desativar Som">🔊</button>
+                    <button id="btn-logout" class="btn-exit">Sair</button>
+                </div>
             </div>
 
             <div class="canvas-wrapper">
@@ -63,24 +79,30 @@
                     <div class="final-stats">
                         <p>Pontuação: <strong id="final-score">0</strong> pts</p>
                         <p>Tempo: <strong id="final-time">0</strong>s</p>
+                        <p>Ranking Atual: <strong id="final-rank">Calculando...</strong></p>
                     </div>
-                    <button id="btn-restart" class="btn-primary">Jogar Novamente</button>
+                    <button id="btn-restart" class="btn-primary steampunk-btn">Jogar Novamente</button>
                 </div>
             </div>
 
-            <!-- Controles Touch para Celular -->
-            <div id="mobile-controls" class="dpad-container">
+            <!-- Controles Touch em Cruz (D-Pad Ergonômico para Celular) -->
+            <div id="mobile-controls" class="dpad-grid">
+                <div></div>
                 <button id="btn-up" class="dpad-btn">▲</button>
-                <div class="dpad-middle">
-                    <button id="btn-left" class="dpad-btn">◄</button>
-                    <button id="btn-down" class="dpad-btn">▼</button>
-                    <button id="btn-right" class="dpad-btn">►</button>
-                </div>
+                <div></div>
+
+                <button id="btn-left" class="dpad-btn">◄</button>
+                <div class="dpad-center"></div>
+                <button id="btn-right" class="dpad-btn">►</button>
+
+                <div></div>
+                <button id="btn-down" class="dpad-btn">▼</button>
+                <div></div>
             </div>
         </section>
 
-        <!-- HALL DOS MELHORES (ESTILO ARCADE LIMPO E CENTRALIZADO) -->
-        <section class="card arcade-hall">
+        <!-- HALL DOS MELHORES -->
+        <section class="card arcade-hall steampunk-card">
             <div class="arcade-top-bar">
                 <div class="arcade-stat">
                     <span class="label-red">1UP</span>
@@ -92,7 +114,7 @@
                 </div>
             </div>
 
-            <div class="hall-title">TOP 5 PLAYERS</div>
+            <div class="hall-title blink-arcade">TOP 5 PLAYERS</div>
 
             <div class="arcade-table">
                 <div class="arcade-row arcade-header-row">
@@ -159,6 +181,6 @@
         </div>
     </div>
 
-    <script src="app.js?v=3"></script>
+    <script src="app.js?v=6"></script>
 </body>
 </html>

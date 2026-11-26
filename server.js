@@ -50,6 +50,7 @@ app.post('/api/auth', async (req, res) => {
     }
 });
 
+// Registrar pontuação e retornar a posição atual no ranking
 app.post('/api/score', async (req, res) => {
     const { username, score, time } = req.body;
 
@@ -58,19 +59,37 @@ app.post('/api/score', async (req, res) => {
         if (players.length === 0) return res.status(404).json({ error: 'Jogador não encontrado' });
 
         const player = players[0];
-        const currentHighScore = player.high_score || 0;
-        const currentBestTime = player.best_time || 0;
+        let finalHighScore = player.high_score || 0;
+        let finalBestTime = player.best_time || 0;
 
         await db.query('INSERT INTO matches (player_id, score, time_seconds) VALUES (?, ?, ?)', [player.id, score, time]);
 
-        const isBetter = score > currentHighScore || (score === currentHighScore && time > currentBestTime);
+        const isBetter = score > finalHighScore || (score === finalHighScore && time > finalBestTime);
 
         if (isBetter) {
-            await db.query('UPDATE players SET high_score = ?, best_time = ? WHERE id = ?', [score, time, player.id]);
-            res.json({ updated: true, newHighScore: score, newBestTime: time });
-        } else {
-            res.json({ updated: false });
+            finalHighScore = score;
+            finalBestTime = time;
+            await db.query('UPDATE players SET high_score = ?, best_time = ? WHERE id = ?', [finalHighScore, finalBestTime, player.id]);
         }
+
+        // Calcula quantos jogadores têm pontuação melhor (ou empatada com tempo maior)
+        const [[rankRow]] = await db.query(
+            `SELECT COUNT(*) + 1 AS current_rank 
+             FROM players 
+             WHERE high_score > ? OR (high_score = ? AND best_time > ?)`,
+            [finalHighScore, finalHighScore, finalBestTime]
+        );
+
+        // Total de jogadores cadastrados
+        const [[totalRow]] = await db.query('SELECT COUNT(*) AS total FROM players');
+
+        res.json({
+            updated: isBetter,
+            newHighScore: finalHighScore,
+            newBestTime: finalBestTime,
+            rank: rankRow.current_rank,
+            totalPlayers: totalRow.total
+        });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -92,7 +111,6 @@ app.get('/api/leaderboard', async (req, res) => {
 
 // ---------------- CRUD DE JOGADORES (PAINEL ADMIN) ----------------
 
-// Listar todos os jogadores
 app.get('/api/players', async (req, res) => {
     try {
         const [rows] = await db.query('SELECT id, username, high_score, best_time, created_at FROM players ORDER BY id DESC');
@@ -102,7 +120,6 @@ app.get('/api/players', async (req, res) => {
     }
 });
 
-// Atualizar apenas Nome e Senha (preservando high_score e best_time)
 app.put('/api/players/:id', async (req, res) => {
     const { id } = req.params;
     const { username, password } = req.body;
@@ -130,7 +147,6 @@ app.put('/api/players/:id', async (req, res) => {
     }
 });
 
-// Deletar jogador
 app.delete('/api/players/:id', async (req, res) => {
     const { id } = req.params;
 
